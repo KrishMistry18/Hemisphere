@@ -4,7 +4,7 @@
 
 Hemisphere is a comprehensive Flutter-based mobile application designed to foster community engagement, enhance local safety, and promote environmental consciousness through AI-driven insights.
 
-🔗 Live web Demo : hemisphere-dev.vercel.app/
+🔗 Live web Demo : https://hemisphere-dev.vercel.app/
 
 ## ✨ Key Features
 
