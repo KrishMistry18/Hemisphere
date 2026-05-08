@@ -1,9 +1,9 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../theme/app_theme.dart';
-import '../../providers/dev_mode_provider.dart';
 import 'report_processing_screen.dart';
 
 enum ReportType { accident, waste }
@@ -75,10 +75,14 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
     }
   }
 
+  bool get _isDesktop => !kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS);
+
   Future<void> _captureImage() async {
     final picker = ImagePicker();
+    // Camera not supported on desktop — fall back to gallery
+    final source = _isDesktop ? ImageSource.gallery : ImageSource.camera;
     final image = await picker.pickImage(
-      source: ImageSource.camera,
+      source: source,
       imageQuality: 80,
       maxWidth: 1280,
     );
@@ -235,100 +239,94 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
                 ),
               ),
             ] else ...[
-              ValueListenableBuilder<bool>(
-                valueListenable: DevModeProvider.instance,
-                builder: (context, isDevMode, _) {
-                  return Row(
-                    children: [
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: _captureImage,
-                          child: Container(
-                            height: 180,
-                            decoration: BoxDecoration(
-                              color: AppColors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: AppColors.black, width: 2),
-                              boxShadow: const [
-                                BoxShadow(color: AppColors.black, blurRadius: 0, offset: Offset(4, 4)),
-                              ],
-                            ),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(16),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.yellow,
-                                    shape: BoxShape.circle,
-                                    border: Border.all(color: AppColors.black, width: 2),
-                                    boxShadow: const [
-                                      BoxShadow(color: AppColors.black, blurRadius: 0, offset: Offset(2, 2)),
-                                    ],
-                                  ),
-                                  child: const Icon(
-                                    Icons.camera_alt_rounded,
-                                    color: AppColors.black,
-                                    size: 32,
-                                  ),
-                                ),
-                                const SizedBox(height: 16),
-                                Text(isDevMode ? 'Camera' : 'Tap to Open Camera', style: AppTextStyles.labelLarge.copyWith(color: AppColors.black)),
-                                if (!isDevMode) ...[
-                                  const SizedBox(height: 4),
-                                  Text('Take a photo of the situation',
-                                      style: AppTextStyles.caption.copyWith(color: AppColors.black.withValues(alpha: 0.6))),
+              Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: _captureImage,
+                      child: Container(
+                        height: 180,
+                        decoration: BoxDecoration(
+                          color: AppColors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: AppColors.black, width: 2),
+                          boxShadow: const [
+                            BoxShadow(color: AppColors.black, blurRadius: 0, offset: Offset(4, 4)),
+                          ],
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: AppColors.yellow,
+                                shape: BoxShape.circle,
+                                border: Border.all(color: AppColors.black, width: 2),
+                                boxShadow: const [
+                                  BoxShadow(color: AppColors.black, blurRadius: 0, offset: Offset(2, 2)),
                                 ],
-                              ],
+                              ),
+                              child: Icon(
+                                _isDesktop ? Icons.photo_library_rounded : Icons.camera_alt_rounded,
+                                color: AppColors.black,
+                                size: 32,
+                              ),
                             ),
+                            const SizedBox(height: 16),
+                            Text(
+                              _isDesktop ? 'Browse Files' : 'Tap to Open Camera',
+                              style: AppTextStyles.labelLarge.copyWith(color: AppColors.black),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              _isDesktop ? 'Select a photo from your device' : 'Take a photo of the situation',
+                              style: AppTextStyles.caption.copyWith(color: AppColors.black.withValues(alpha: 0.6)),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (!_isDesktop) ...[
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: _uploadImage,
+                        child: Container(
+                          height: 180,
+                          decoration: BoxDecoration(
+                            color: AppColors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: AppColors.black, width: 2),
+                            boxShadow: const [
+                              BoxShadow(color: AppColors.black, blurRadius: 0, offset: Offset(4, 4)),
+                            ],
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: AppColors.green,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: AppColors.black, width: 2),
+                                  boxShadow: const [
+                                    BoxShadow(color: AppColors.black, blurRadius: 0, offset: Offset(2, 2)),
+                                  ],
+                                ),
+                                child: const Icon(Icons.photo_library_rounded, color: AppColors.black, size: 32),
+                              ),
+                              const SizedBox(height: 16),
+                              Text('Gallery', style: AppTextStyles.labelLarge.copyWith(color: AppColors.black)),
+                            ],
                           ),
                         ),
                       ),
-                      if (isDevMode) ...[
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: _uploadImage,
-                            child: Container(
-                              height: 180,
-                              decoration: BoxDecoration(
-                                color: AppColors.white,
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(color: AppColors.black, width: 2),
-                                boxShadow: const [
-                                  BoxShadow(color: AppColors.black, blurRadius: 0, offset: Offset(4, 4)),
-                                ],
-                              ),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(16),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.green,
-                                      shape: BoxShape.circle,
-                                      border: Border.all(color: AppColors.black, width: 2),
-                                      boxShadow: const [
-                                        BoxShadow(color: AppColors.black, blurRadius: 0, offset: Offset(2, 2)),
-                                      ],
-                                    ),
-                                    child: const Icon(
-                                      Icons.photo_library_rounded,
-                                      color: AppColors.black,
-                                      size: 32,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  Text('Gallery', style: AppTextStyles.labelLarge.copyWith(color: AppColors.black)),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  );
-                },
+                    ),
+                  ],
+                ],
               ),
             ],
             const SizedBox(height: 24),

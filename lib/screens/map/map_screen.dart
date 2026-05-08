@@ -521,10 +521,7 @@ class _MapScreenState extends State<MapScreen>
           ),
           children: [
             TileLayer(
-              urlTemplate: 'https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/256/{z}/{x}/{y}@2x?access_token={accessToken}',
-              additionalOptions: {
-                'accessToken': dotenv.env['MAPBOX_ACCESS_TOKEN'] ?? '',
-              },
+              urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
               userAgentPackageName: 'com.hemisphere.app',
             ),
             // Incident / Event Markers

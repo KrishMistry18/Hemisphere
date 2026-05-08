@@ -1,3 +1,4 @@
+import 'dart:io' show Platform;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -61,7 +62,15 @@ class AuthService {
   // ---------------------------------------------------------------------------
 
   /// Sign in with Google. Returns `null` if the user cancelled the flow.
+  /// Throws [UnsupportedError] on Windows/Linux/macOS.
   Future<UserCredential?> signInWithGoogle() async {
+    // Google Sign-In is not supported on desktop platforms
+    if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
+      throw UnsupportedError(
+        'Google Sign-In is not supported on desktop platforms. Please use email/password authentication.',
+      );
+    }
+
     // Trigger the Google Sign-In flow
     final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
     if (googleUser == null) return null; // User cancelled
@@ -159,7 +168,8 @@ class AuthService {
       case 'user-not-found':
         return 'No account found with this email.';
       case 'wrong-password':
-        return 'Incorrect password. Please try again.';
+      case 'invalid-credential':
+        return 'Incorrect email or password. Please try again.';
       case 'weak-password':
         return 'Password is too weak. Use at least 6 characters.';
       case 'too-many-requests':
@@ -168,10 +178,12 @@ class AuthService {
         return 'The OTP code is invalid. Please try again.';
       case 'invalid-phone-number':
         return 'Please enter a valid phone number with country code.';
-      case 'invalid-credential':
-        return 'Invalid credentials. Please check and try again.';
+      case 'network-request-failed':
+        return 'Network error. Please check your internet connection.';
+      case 'operation-not-allowed':
+        return 'Email/password sign-in is not enabled. Please contact support.';
       default:
-        return e.message ?? 'An unexpected error occurred.';
+        return e.message ?? 'An unexpected error occurred. (${e.code})';
     }
   }
 }

@@ -16,6 +16,10 @@ migrate_working_dir/
 node_modules/
 package-lock.json
 
+# Seed scripts (local dev only)
+seed_data.js
+seed_rest.js
+
 # IntelliJ related
 *.iml
 *.ipr

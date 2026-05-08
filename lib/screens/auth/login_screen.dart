@@ -1,4 +1,6 @@
+import 'dart:io' show Platform;
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 import '../../services/auth_service.dart';
@@ -16,6 +18,26 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   bool _loading = false;
 
+  // Email/password form (used on desktop)
+  bool _isDesktop = false;
+  bool _isSignUp = false;
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+
+  @override
+  void initState() {
+    super.initState();
+    _isDesktop = !kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS);
+  }
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
   Future<void> _signInGoogle() async {
     setState(() => _loading = true);
     try {
@@ -24,16 +46,13 @@ class _LoginScreenState extends State<LoginScreen> {
         if (mounted) setState(() => _loading = false);
         return; // user cancelled
       }
-
-      // Ensure Firestore profile is created for new logins
-      await FirestoreService.instance.ensureProfile().timeout(
-        const Duration(seconds: 8),
-      );
-
       if (!mounted) return;
-      Navigator.of(
-        context,
-      ).pushReplacement(MaterialPageRoute(builder: (_) => const HomeScreen()));
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const HomeScreen()),
+      );
+      FirestoreService.instance.ensureProfile().catchError((e) {
+        debugPrint('ensureProfile warning: $e');
+      });
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
       _showError(AuthService.friendlyError(e));
@@ -41,6 +60,42 @@ class _LoginScreenState extends State<LoginScreen> {
       debugPrint('Google sign-in error: $e');
       if (!mounted) return;
       _showError('Google sign-in failed. Please try again.');
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _signInWithEmail() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _loading = true);
+    try {
+      if (_isSignUp) {
+        await AuthService.instance.signUpWithEmail(
+          email: _emailController.text,
+          password: _passwordController.text,
+        );
+      } else {
+        await AuthService.instance.signInWithEmail(
+          email: _emailController.text,
+          password: _passwordController.text,
+        );
+      }
+      // Navigate immediately — Firestore profile creation is best-effort
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const HomeScreen()),
+      );
+      FirestoreService.instance.ensureProfile().catchError((e) {
+        debugPrint('ensureProfile warning (non-fatal): $e');
+      });
+    } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
+      _showError(AuthService.friendlyError(e));
+    } catch (e) {
+      debugPrint('Email sign-in error: $e');
+      if (!mounted) return;
+      final msg = e.toString().replaceFirst('Exception: ', '');
+      _showError(msg.length > 120 ? 'Sign-in failed. Please try again.' : msg);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -66,7 +121,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final colors = context.h;
 
     return Scaffold(
-      backgroundColor: colors.background, // or AppColors.yellow?
+      backgroundColor: colors.background,
       body: Stack(
         children: [
           // Top Image Area
@@ -154,56 +209,174 @@ class _LoginScreenState extends State<LoginScreen> {
                       height: 1.5,
                     ),
                   ),
-                  const SizedBox(height: 48),
+                  const SizedBox(height: 32),
 
-                  // Get Started Google Sign In Button
-                  GestureDetector(
-                    onTap: _loading ? null : _signInGoogle,
-                    child: Container(
-                      width: double.infinity,
-                      height: 60,
-                      decoration: BoxDecoration(
-                        color: AppColors.yellow,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: AppColors.black, width: 2),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: AppColors.black,
-                            blurRadius: 0,
-                            offset: Offset(4, 4),
+                  // Desktop: show email/password form
+                  if (_isDesktop) ...[
+                    Form(
+                      key: _formKey,
+                      child: Column(
+                        children: [
+                          TextFormField(
+                            controller: _emailController,
+                            keyboardType: TextInputType.emailAddress,
+                            style: TextStyle(color: colors.textPrimary),
+                            decoration: InputDecoration(
+                              labelText: 'Email',
+                              labelStyle: TextStyle(color: colors.textSecondary),
+                              filled: true,
+                              fillColor: colors.background,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(color: AppColors.black, width: 2),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide(color: colors.textSecondary.withOpacity(0.4), width: 1.5),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(color: AppColors.yellow, width: 2),
+                              ),
+                            ),
+                            validator: (v) =>
+                                (v == null || !v.contains('@')) ? 'Enter a valid email' : null,
+                          ),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: _passwordController,
+                            obscureText: true,
+                            style: TextStyle(color: colors.textPrimary),
+                            decoration: InputDecoration(
+                              labelText: 'Password',
+                              labelStyle: TextStyle(color: colors.textSecondary),
+                              filled: true,
+                              fillColor: colors.background,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(color: AppColors.black, width: 2),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide(color: colors.textSecondary.withOpacity(0.4), width: 1.5),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(color: AppColors.yellow, width: 2),
+                              ),
+                            ),
+                            validator: (v) =>
+                                (v == null || v.length < 6) ? 'Password must be at least 6 characters' : null,
+                          ),
+                          const SizedBox(height: 20),
+                          // Sign In / Sign Up button
+                          GestureDetector(
+                            onTap: _loading ? null : _signInWithEmail,
+                            child: Container(
+                              width: double.infinity,
+                              height: 60,
+                              decoration: BoxDecoration(
+                                color: AppColors.yellow,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: AppColors.black, width: 2),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: AppColors.black,
+                                    blurRadius: 0,
+                                    offset: Offset(4, 4),
+                                  ),
+                                ],
+                              ),
+                              child: _loading
+                                  ? const Center(
+                                      child: SizedBox(
+                                        width: 24,
+                                        height: 24,
+                                        child: CircularProgressIndicator(
+                                          color: AppColors.black,
+                                          strokeWidth: 3,
+                                        ),
+                                      ),
+                                    )
+                                  : Center(
+                                      child: Text(
+                                        _isSignUp ? 'Create Account --->' : 'Sign In --->',
+                                        style: AppTextStyles.buttonLarge.copyWith(
+                                          color: AppColors.black,
+                                        ),
+                                      ),
+                                    ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          // Toggle sign in / sign up
+                          GestureDetector(
+                            onTap: () => setState(() => _isSignUp = !_isSignUp),
+                            child: Center(
+                              child: Text(
+                                _isSignUp
+                                    ? 'Already have an account? Sign in'
+                                    : "Don't have an account? Sign up",
+                                style: AppTextStyles.bodyMedium.copyWith(
+                                  color: colors.textSecondary,
+                                  decoration: TextDecoration.underline,
+                                ),
+                              ),
+                            ),
                           ),
                         ],
                       ),
-                      child: _loading
-                          ? const Center(
-                              child: SizedBox(
-                                width: 24,
-                                height: 24,
-                                child: CircularProgressIndicator(
-                                  color: AppColors.black,
-                                  strokeWidth: 3,
-                                ),
-                              ),
-                            )
-                          : Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(
-                                  Icons.g_mobiledata_rounded,
-                                  color: AppColors.black,
-                                  size: 36,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Get Started --->',
-                                  style: AppTextStyles.buttonLarge.copyWith(
+                    ),
+                  ] else ...[
+                    // Mobile/Web: Google Sign-In button
+                    GestureDetector(
+                      onTap: _loading ? null : _signInGoogle,
+                      child: Container(
+                        width: double.infinity,
+                        height: 60,
+                        decoration: BoxDecoration(
+                          color: AppColors.yellow,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: AppColors.black, width: 2),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: AppColors.black,
+                              blurRadius: 0,
+                              offset: Offset(4, 4),
+                            ),
+                          ],
+                        ),
+                        child: _loading
+                            ? const Center(
+                                child: SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(
                                     color: AppColors.black,
+                                    strokeWidth: 3,
                                   ),
                                 ),
-                              ],
-                            ),
+                              )
+                            : Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(
+                                    Icons.g_mobiledata_rounded,
+                                    color: AppColors.black,
+                                    size: 36,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Get Started --->',
+                                    style: AppTextStyles.buttonLarge.copyWith(
+                                      color: AppColors.black,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                      ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),

@@ -13,5 +13,27 @@
     "location": "nam5",
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "neighbourhood-hub-bbb75",
+          "appId": "1:813874496524:android:9b2924b6c298b4bdbf5a29",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "neighbourhood-hub-bbb75",
+          "configurations": {
+            "android": "1:813874496524:android:9b2924b6c298b4bdbf5a29",
+            "ios": "1:813874496524:ios:5701e0340fa189e0bf5a29",
+            "web": "1:813874496524:web:c602161499425c81bf5a29",
+            "windows": "1:813874496524:web:da5ea3b545dee471bf5a29"
+          }
+        }
+      }
+    }
   }
 }

@@ -92,13 +92,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _loadProfile() async {
-    final profile = await FirestoreService.instance.getProfile();
-    if (!mounted) return;
-    setState(() {
-      _profile = profile;
-      _loading = false;
-      _refreshCounter++;
-    });
+    try {
+      // If Firestore isn't ready yet, create the profile first
+      await FirestoreService.instance.ensureProfile();
+      final profile = await FirestoreService.instance.getProfile();
+      if (!mounted) return;
+      setState(() {
+        _profile = profile;
+        _loading = false;
+        _refreshCounter++;
+      });
+    } catch (e) {
+      debugPrint('Profile load error: $e');
+      if (!mounted) return;
+      // Still show the screen even if Firestore fails
+      setState(() {
+        _loading = false;
+        _refreshCounter++;
+      });
+    }
   }
 
   Future<void> _signOut() async {
