@@ -11,11 +11,7 @@ class AuthService {
   static final AuthService instance = AuthService._();
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn(
-    clientId: kIsWeb
-        ? 'demo-web-client-id.apps.googleusercontent.com'
-        : null,
-  );
+  final GoogleSignIn _googleSignIn = GoogleSignIn();
 
   // ---------------------------------------------------------------------------
   // State
@@ -64,10 +60,10 @@ class AuthService {
   /// Sign in with Google. Returns `null` if the user cancelled the flow.
   /// Throws [UnsupportedError] on Windows/Linux/macOS.
   Future<UserCredential?> signInWithGoogle() async {
-    // Google Sign-In is not supported on desktop platforms
-    if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
+    // Google Sign-In is not supported on desktop or web platforms
+    if (kIsWeb || Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
       throw UnsupportedError(
-        'Google Sign-In is not supported on desktop platforms. Please use email/password authentication.',
+        'Google Sign-In is not supported on this platform. Please use email/password authentication.',
       );
     }
 

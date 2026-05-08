@@ -28,7 +28,9 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   void initState() {
     super.initState();
-    _isDesktop = !kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS);
+    // Use email/password on web and all desktop platforms.
+    // Google Sign-In only works on Android & iOS (requires real OAuth setup).
+    _isDesktop = kIsWeb || Platform.isWindows || Platform.isLinux || Platform.isMacOS;
   }
 
   @override
