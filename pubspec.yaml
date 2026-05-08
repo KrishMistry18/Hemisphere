@@ -59,6 +59,14 @@ dev_dependencies:
   flutter_launcher_icons: ^0.14.4
   flutter_native_splash: ^2.4.7
 
+# tflite_flutter is only used on native (Android/iOS/Windows).
+# The stub below prevents dart:ffi errors during web builds.
+# For native builds, override this with the real package:
+#   flutter pub add tflite_flutter:^0.12.1
+dependency_overrides:
+  tflite_flutter:
+    path: packages/tflite_flutter_stub
+
 flutter:
   uses-material-design: true
 

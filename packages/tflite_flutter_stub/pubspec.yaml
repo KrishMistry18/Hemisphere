@@ -1,0 +1,6 @@
+name: tflite_flutter
+version: 0.12.1
+description: Web stub for tflite_flutter
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
